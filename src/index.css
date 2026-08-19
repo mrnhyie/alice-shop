@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans text-zinc-900 bg-white;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+@layer components {
+  .hero-slide-active {
+    animation: hero-image-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
+  }
+
+  .hero-copy-enter {
+    animation: hero-copy-enter 600ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .btn-primary {
+    @apply bg-orange-500 text-white font-semibold px-6 py-3 rounded-full hover:bg-orange-600 transition-all duration-200 inline-flex items-center gap-2;
+  }
+
+  .btn-outline {
+    @apply border-2 border-orange-500 text-orange-500 font-semibold px-6 py-3 rounded-full hover:bg-orange-500 hover:text-white transition-all duration-200 inline-flex items-center gap-2;
+  }
+
+  .btn-dark {
+    @apply bg-zinc-900 text-white font-semibold px-6 py-3 rounded-full hover:bg-zinc-700 transition-all duration-200 inline-flex items-center gap-2;
+  }
+
+  .section-heading {
+    @apply font-serif text-3xl md:text-4xl font-bold text-zinc-900;
+  }
+
+  .card-shadow {
+    @apply shadow-md hover:shadow-xl transition-shadow duration-300;
+  }
+}
+
+@keyframes hero-image-enter {
+  from { opacity: 0; transform: scale(1.12); filter: saturate(0.75) blur(3px); }
+  to { opacity: 1; transform: scale(1); filter: saturate(1) blur(0); }
+}
+
+@keyframes hero-copy-enter {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide-active, .hero-copy-enter { animation: none; }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-zinc-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-orange-400 rounded-full;
+}
+
+/* Range input styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #e4e4e7;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f97316;
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f97316;
+  cursor: pointer;
+  border: none;
+}
