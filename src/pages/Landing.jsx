@@ -9,6 +9,7 @@ import Footer    from '../components/Footer';
 import CartDrawer from '../components/CartDrawer';
 import { testimonials } from '../data/products';
 import { productsApi }  from '../api/products.js';
+import { landingApi } from '../api/customers.js';
 import { useCart }      from '../context/CartContext';
 import heroLookOne from '../assets/pexels-kahlibrown-30604266.jpg';
 import heroLookTwo from '../assets/pexels-daniwura-tci-492293783-35101507.jpg';
@@ -171,10 +172,15 @@ export default function Landing() {
   const [email,      setEmail]      = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [activeLook, setActiveLook] = useState(0);
+  const [landingImages, setLandingImages] = useState(null);
 
   // Products from DB
   const [featured, setFeatured]       = useState([]);
   const [productCount, setProductCount] = useState(null); // null = loading
+
+  useEffect(() => {
+    landingApi.get().then(setLandingImages).catch(() => setLandingImages({}));
+  }, []);
 
   useEffect(() => {
     productsApi.list()
@@ -186,7 +192,7 @@ export default function Landing() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setActiveLook((current) => (current + 1) % HERO_LOOKS.length), 3000);
+    const timer = window.setInterval(() => setActiveLook((current) => (current + 1) % heroLooksResolved.length), 3000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -203,6 +209,12 @@ export default function Landing() {
     `transition-all duration-700 ${delay} ${v ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`;
 
   const hasProducts = featured.length > 0;
+
+  const imageValue = (key, fallback) => landingImages?.[key]?.value || fallback;
+  const heroLooksResolved = HERO_LOOKS.map((look, index) => ({ ...look, image: imageValue(`hero${index + 1}`, look.image) }));
+  const categoriesResolved = CATEGORIES.map((cat) => ({ ...cat, image: imageValue(`category_${cat.slug}`, cat.image) }));
+  const resolvedStoryImage = imageValue('story', storyImage);
+  const resolvedStoryDetailImage = imageValue('story_detail', storyDetailImage);
 
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -232,17 +244,17 @@ export default function Landing() {
 
           <div className="relative mt-12 overflow-hidden rounded-[2.5rem] bg-zinc-900 text-left shadow-2xl sm:rounded-[3.5rem] lg:mt-16">
             <div className="relative h-[430px] sm:h-[560px] lg:h-[690px]">
-              {HERO_LOOKS.map((look, index) => (
+              {heroLooksResolved.map((look, index) => (
                 <img key={look.alt} src={look.image} alt={look.alt} className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ${index === activeLook ? 'hero-slide-active opacity-100' : 'scale-110 opacity-0'}`} />
               ))}
-              <div className={`absolute inset-0 bg-gradient-to-t ${HERO_LOOKS[activeLook].tint}`} />
+              <div className={`absolute inset-0 bg-gradient-to-t ${heroLooksResolved[activeLook].tint}`} />
               <div key={activeLook} className="hero-copy-enter absolute inset-x-0 bottom-0 p-7 text-white sm:p-10 lg:p-14">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#CBEF43]">{HERO_LOOKS[activeLook].eyebrow}</p>
-                <h2 className="mt-3 max-w-lg font-serif text-4xl font-bold leading-none sm:text-6xl lg:text-7xl">{HERO_LOOKS[activeLook].title}</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#CBEF43]">{heroLooksResolved[activeLook].eyebrow}</p>
+                <h2 className="mt-3 max-w-lg font-serif text-4xl font-bold leading-none sm:text-6xl lg:text-7xl">{heroLooksResolved[activeLook].title}</h2>
               </div>
-              <button type="button" aria-label="Previous look" onClick={() => setActiveLook((activeLook - 1 + HERO_LOOKS.length) % HERO_LOOKS.length)} className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-zinc-900 transition hover:bg-white sm:left-6 sm:p-3"><ChevronLeft size={22} /></button>
-              <button type="button" aria-label="Next look" onClick={() => setActiveLook((activeLook + 1) % HERO_LOOKS.length)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-zinc-900 transition hover:bg-white sm:right-6 sm:p-3"><ChevronRight size={22} /></button>
-              <div className="absolute bottom-5 right-6 flex gap-2 sm:bottom-8 sm:right-10">{HERO_LOOKS.map((look, index) => <button key={look.alt} type="button" aria-label={`Show look ${index + 1}`} onClick={() => setActiveLook(index)} className={`h-2 rounded-full transition-all ${index === activeLook ? 'w-8 bg-white' : 'w-2 bg-white/55 hover:bg-white/80'}`} />)}</div>
+              <button type="button" aria-label="Previous look" onClick={() => setActiveLook((activeLook - 1 + heroLooksResolved.length) % heroLooksResolved.length)} className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-zinc-900 transition hover:bg-white sm:left-6 sm:p-3"><ChevronLeft size={22} /></button>
+              <button type="button" aria-label="Next look" onClick={() => setActiveLook((activeLook + 1) % heroLooksResolved.length)} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2.5 text-zinc-900 transition hover:bg-white sm:right-6 sm:p-3"><ChevronRight size={22} /></button>
+              <div className="absolute bottom-5 right-6 flex gap-2 sm:bottom-8 sm:right-10">{heroLooksResolved.map((look, index) => <button key={look.alt} type="button" aria-label={`Show look ${index + 1}`} onClick={() => setActiveLook(index)} className={`h-2 rounded-full transition-all ${index === activeLook ? 'w-8 bg-white' : 'w-2 bg-white/55 hover:bg-white/80'}`} />)}</div>
             </div>
           </div>
 
@@ -344,7 +356,7 @@ export default function Landing() {
           </div>
 
           <div className={`grid grid-cols-2 lg:grid-cols-4 gap-3 ${fade(catVisible, 'delay-150')}`}>
-            {CATEGORIES.map((cat) => (
+            {categoriesResolved.map((cat) => (
               <Link
                 key={cat.slug}
                 to={`/store?category=${cat.slug}`}
@@ -403,10 +415,10 @@ export default function Landing() {
 
             <div className={`relative pb-10 ${fade(storyVisible, 'delay-200')}`}>
               <div className="rounded-2xl overflow-hidden shadow-xl">
-                <img src={storyImage} alt="Alice fashion collection" className="w-full h-[480px] lg:h-[620px] object-cover" />
+                <img src={resolvedStoryImage} alt="Alice fashion collection" className="w-full h-[480px] lg:h-[620px] object-cover" />
               </div>
               <div className="absolute -bottom-2 -left-4 w-36 lg:w-44 h-44 lg:h-56 rounded-xl overflow-hidden border-4 border-white shadow-2xl">
-                <img src={storyDetailImage} alt="Colourful fashion detail" className="w-full h-full object-cover" />
+                <img src={resolvedStoryDetailImage} alt="Colourful fashion detail" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -top-4 -right-3 bg-orange-500 text-white rounded-2xl px-5 py-4 shadow-2xl">
                 <div className="font-serif text-3xl font-bold">100%</div>

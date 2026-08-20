@@ -89,6 +89,12 @@ db.exec(`
     created_at  TEXT    DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS landing_images (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    alt        TEXT DEFAULT ''
+  );
+
   CREATE TABLE IF NOT EXISTS announcements (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     text       TEXT    NOT NULL,

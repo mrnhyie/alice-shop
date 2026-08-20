@@ -16,3 +16,8 @@ export const messagesApi = {
   list: (customerId) => api.get(customerId ? `/messages?customerId=${customerId}` : '/messages'),
   send: (data)      => api.post('/messages', data),
 };
+
+export const landingApi = {
+  get: () => api.get('/landing'),
+  update: (key, data) => api.put(`/landing/${key}`, data),
+};

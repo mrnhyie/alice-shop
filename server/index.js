@@ -7,6 +7,7 @@ import customersRouter     from './routes/customers.js';
 import notificationsRouter from './routes/notifications.js';
 import messagesRouter      from './routes/messages.js';
 import announcementsRouter from './routes/announcements.js';
+import landingRouter       from './routes/landing.js';
 
 const app  = express();
 const PORT = 3001;
@@ -21,6 +22,7 @@ app.use('/api/customers',     customersRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/messages',      messagesRouter);
 app.use('/api/announcements', announcementsRouter);
+app.use('/api/landing',       landingRouter);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 

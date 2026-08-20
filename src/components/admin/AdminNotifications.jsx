@@ -19,14 +19,24 @@ export default function AdminNotifications() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const previousUnread = useRef(0);
   const panelRef = useRef(null);
   const navigate = useNavigate();
 
   const fetchNotifications = useCallback(async () => {
     try {
       const data = await notificationsApi.list();
-      setNotifications(data.notifications ?? []);
-      setUnreadCount(data.unreadCount ?? 0);
+      const nextNotifications = data.notifications ?? [];
+      const nextUnread = data.unreadCount ?? 0;
+      if (nextUnread > previousUnread.current && nextNotifications[0]) {
+        const newest = nextNotifications[0];
+        setToast({ title: newest.title, body: newest.body });
+        window.setTimeout(() => setToast(null), 4500);
+      }
+      previousUnread.current = nextUnread;
+      setNotifications(nextNotifications);
+      setUnreadCount(nextUnread);
     } catch {
       /* silent — bell still renders */
     }
@@ -75,6 +85,11 @@ export default function AdminNotifications() {
 
   return (
     <div className="relative" ref={panelRef}>
+      {toast && (
+        <button onClick={() => { setToast(null); setOpen(true); }} className="fixed right-4 top-20 z-[60] w-[min(360px,calc(100vw-2rem))] text-left rounded-2xl border border-orange-100 bg-white shadow-2xl p-4 animate-in slide-in-from-right">
+          <div className="flex items-start gap-3"><div className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center"><Bell size={16}/></div><div className="min-w-0"><p className="text-sm font-bold text-zinc-900">{toast.title}</p><p className="text-xs text-zinc-500 mt-1 line-clamp-2">{toast.body}</p><p className="text-[10px] text-orange-500 mt-2 font-semibold">Open notifications</p></div></div>
+        </button>
+      )}
       <button
         onClick={handleOpen}
         className="relative p-2 rounded-xl hover:bg-zinc-100 transition-colors"

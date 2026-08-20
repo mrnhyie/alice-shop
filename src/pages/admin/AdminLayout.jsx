@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, BarChart3,
-  Settings, ChevronLeft, ChevronRight, Search,
+  Settings, ChevronLeft, Image, ChevronRight, Search,
   LogOut, Menu, X, Store, TrendingUp, Shield
 } from '../../components/MaterialIcon';
 import AdminNotifications from '../../components/admin/AdminNotifications';
@@ -35,6 +35,7 @@ export default function AdminLayout() {
         { icon: Package, label: 'Products', to: '/admin/products' },
         { icon: BarChart3, label: 'Analytics', to: '/admin/analytics' },
         { icon: TrendingUp, label: 'Marketing', to: '/admin/marketing' },
+        { icon: Image, label: 'Landing Page', to: '/admin/landing' },
       ]
     },
     {

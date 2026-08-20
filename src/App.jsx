@@ -21,6 +21,7 @@ import AdminCustomers from './pages/admin/Customers';
 import AdminMarketing from './pages/admin/Marketing';
 import AdminSettings from './pages/admin/Settings';
 import AdminSecurity from './pages/admin/Security';
+import LandingEditor from './pages/admin/LandingEditor';
 
 // ── Auth guard: redirects to /admin/login if not authenticated ────────────────
 function RequireAuth() {
@@ -39,6 +40,7 @@ export default function App() {
             {/* ── Public ── */}
             <Route path="/" element={<Landing />} />
             <Route path="/store" element={<Store />} />
+            <Route path="/shop" element={<Store />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/login" element={<CustomerLogin />} />
@@ -59,6 +61,7 @@ export default function App() {
                 <Route path="customers"  element={<AdminCustomers />} />
                 <Route path="marketing"  element={<AdminMarketing />} />
                 <Route path="settings"   element={<AdminSettings />} />
+                <Route path="landing"    element={<LandingEditor />} />
                 <Route path="security"   element={<AdminSecurity />} />
               </Route>
             </Route>
