@@ -1,5 +1,7 @@
 import express from 'express';
-import cors    from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join }  from 'path';
+import { existsSync }     from 'fs';
 import productsRouter      from './routes/products.js';
 import ordersRouter        from './routes/orders.js';
 import authRouter          from './routes/auth.js';
@@ -9,12 +11,15 @@ import messagesRouter      from './routes/messages.js';
 import announcementsRouter from './routes/announcements.js';
 import landingRouter       from './routes/landing.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const app  = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: 'http://localhost:5173' }));
-app.use(express.json({ limit: '10mb' }));  // allow base64 image uploads
+// ── Body parser (10 mb to allow base64 image uploads) ────────────────────────
+app.use(express.json({ limit: '10mb' }));
 
+// ── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/products',      productsRouter);
 app.use('/api/orders',        ordersRouter);
 app.use('/api/auth',          authRouter);
@@ -26,6 +31,20 @@ app.use('/api/landing',       landingRouter);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
+// ── Serve the React build (monolith mode) ─────────────────────────────────────
+// The dist/ folder sits one level up from server/
+const distPath = join(__dirname, '..', 'dist');
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  // For client-side routing: send index.html for any non-API route
+  app.get('/{*path}', (_req, res) => {
+    res.sendFile(join(distPath, 'index.html'));
+  });
+} else {
+  // Dev fallback: no dist yet, just tell callers the API is running
+  app.get('/', (_req, res) => res.json({ message: 'API running — run `npm run build` to serve the frontend.' }));
+}
+
 app.listen(PORT, () => {
-  console.log(`\n🛍  Alice API  →  http://localhost:${PORT}/api\n`);
+  console.log(`\n🛍  Alice Shop  →  http://localhost:${PORT}\n`);
 });
