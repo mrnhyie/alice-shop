@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Database files (local SQLite)
+server/*.db
+server/*.db-shm
+server/*.db-wal
+
+# Vite cache
+.vite/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import db from '../db.js';
+import { Router }    from 'express';
+import { all, get }  from '../db.js';
 
 const router = Router();
 
-const listQuery = (where = '') => `
+const listSQL = (where = '') => `
   SELECT
     c.id,
     c.name,
@@ -30,43 +30,43 @@ const listQuery = (where = '') => `
 function enrich(row) {
   const orders = row.orders ?? 0;
   return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    phone: row.phone ?? '',
-    avatar: row.avatar ?? '',
+    id:         row.id,
+    name:       row.name,
+    email:      row.email,
+    phone:      row.phone      ?? '',
+    avatar:     row.avatar     ?? '',
     orders,
     totalSpent: row.total_spent ?? 0,
-    location: row.location ?? '—',
-    status: orders > 0 ? 'active' : 'inactive',
-    joined: row.created_at,
+    location:   row.location   ?? '—',
+    status:     orders > 0 ? 'active' : 'inactive',
+    joined:     row.created_at,
   };
 }
 
 /* ── GET /api/customers/stats ── */
-router.get('/stats', (_req, res) => {
+router.get('/stats', async (_req, res) => {
   try {
-    const total = db.prepare('SELECT COUNT(*) AS v FROM customers').get().v;
-    const active = db.prepare(`
+    const total        = await get('SELECT COUNT(*) AS v FROM customers');
+    const active       = await get(`
       SELECT COUNT(DISTINCT c.id) AS v
       FROM customers c
       INNER JOIN orders o ON o.customer_email = c.email
-    `).get().v;
-    const newThisMonth = db.prepare(`
+    `);
+    const newThisMonth = await get(`
       SELECT COUNT(*) AS v FROM customers
-      WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
-    `).get().v;
+      WHERE TO_CHAR(created_at, 'YYYY-MM') = TO_CHAR(NOW(), 'YYYY-MM')
+    `);
 
-    res.json({ total, active, newThisMonth });
+    res.json({ total: Number(total.v), active: Number(active.v), newThisMonth: Number(newThisMonth.v) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
 /* ── GET /api/customers ── */
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
   try {
-    const rows = db.prepare(listQuery()).all();
+    const rows = await all(listSQL());
     res.json(rows.map(enrich));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -74,9 +74,9 @@ router.get('/', (_req, res) => {
 });
 
 /* ── GET /api/customers/:id ── */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const row = db.prepare(listQuery('WHERE c.id = ?')).get(req.params.id);
+    const row = await get(listSQL('WHERE c.id = $1'), [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Customer not found' });
     res.json(enrich(row));
   } catch (e) {

@@ -1,35 +1,36 @@
-import Database from 'better-sqlite3';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { neon } from '@neondatabase/serverless';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const db = new Database(join(__dirname, 'alice.db'));
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set. Add it to your .env file.');
+}
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const sql = neon(process.env.DATABASE_URL);
 
-db.exec(`
+// ── Bootstrap schema ─────────────────────────────────────────────────────────
+await sql`
   CREATE TABLE IF NOT EXISTS products (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          SERIAL PRIMARY KEY,
     name        TEXT    NOT NULL,
     category    TEXT    NOT NULL,
     price       REAL    NOT NULL CHECK(price >= 0),
-    in_stock    INTEGER NOT NULL DEFAULT 1,
+    in_stock    BOOLEAN NOT NULL DEFAULT true,
     rating      REAL    NOT NULL DEFAULT 0,
     reviews     INTEGER NOT NULL DEFAULT 0,
     artisan     TEXT    DEFAULT '',
     region      TEXT    DEFAULT '',
     image       TEXT    DEFAULT '',
-    images      TEXT    DEFAULT '[]',
+    images      JSONB   DEFAULT '[]',
     badge       TEXT    DEFAULT NULL,
     description TEXT    DEFAULT '',
-    sizes       TEXT    DEFAULT '[]',
-    colors      TEXT    DEFAULT '[]',
-    created_at  TEXT    DEFAULT (datetime('now'))
-  );
+    sizes       JSONB   DEFAULT '[]',
+    colors      JSONB   DEFAULT '[]',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS orders (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    id               SERIAL PRIMARY KEY,
     order_ref        TEXT    NOT NULL UNIQUE,
     customer_name    TEXT    NOT NULL,
     customer_email   TEXT    NOT NULL,
@@ -44,21 +45,26 @@ db.exec(`
     shipping_cost    REAL    NOT NULL DEFAULT 30,
     total            REAL    NOT NULL,
     status           TEXT    NOT NULL DEFAULT 'pending',
-    created_at       TEXT    DEFAULT (datetime('now'))
-  );
+    created_at       TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS customers (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    id           SERIAL PRIMARY KEY,
     name         TEXT    NOT NULL,
     email        TEXT    NOT NULL UNIQUE,
     password     TEXT,
     google_id    TEXT,
     avatar       TEXT    DEFAULT '',
-    created_at   TEXT    DEFAULT (datetime('now'))
-  );
+    phone        TEXT    DEFAULT '',
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS order_items (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            SERIAL PRIMARY KEY,
     order_id      INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     product_id    INTEGER,
     product_name  TEXT    NOT NULL,
@@ -67,44 +73,95 @@ db.exec(`
     color         TEXT    DEFAULT '',
     quantity      INTEGER NOT NULL DEFAULT 1,
     unit_price    REAL    NOT NULL
-  );
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS admin_notifications (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    id         SERIAL PRIMARY KEY,
     type       TEXT    NOT NULL,
     title      TEXT    NOT NULL,
     body       TEXT    NOT NULL,
     link       TEXT,
-    read       INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT    DEFAULT (datetime('now'))
-  );
+    read       BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS customer_messages (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     body        TEXT    NOT NULL,
     phone       TEXT    NOT NULL,
     sender      TEXT    NOT NULL DEFAULT 'admin',
     status      TEXT    NOT NULL DEFAULT 'sent',
-    created_at  TEXT    DEFAULT (datetime('now'))
-  );
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS landing_images (
-    key        TEXT PRIMARY KEY,
-    value      TEXT NOT NULL,
-    alt        TEXT DEFAULT ''
-  );
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    alt   TEXT DEFAULT ''
+  )
+`;
 
+await sql`
   CREATE TABLE IF NOT EXISTS announcements (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    text       TEXT    NOT NULL,
-    created_at TEXT    DEFAULT (datetime('now'))
-  );
-`);
+    id         SERIAL PRIMARY KEY,
+    text       TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`;
 
-// Migrations for existing databases
-try { db.exec(`ALTER TABLE customers ADD COLUMN phone TEXT DEFAULT ''`); } catch (_) { /* already exists */ }
-try { db.exec(`ALTER TABLE products ADD COLUMN images TEXT DEFAULT '[]'`); } catch (_) { /* already exists */ }
-try { db.exec(`ALTER TABLE customer_messages ADD COLUMN sender TEXT NOT NULL DEFAULT 'admin'`); } catch (_) { /* already exists */ }
+// ── Query helpers ─────────────────────────────────────────────────────────────
+// neon() returns a tagged-template function. For dynamic parameterised queries
+// (runtime SQL strings with $1…$N placeholders) we use sql.query(str, params)
+// which is the supported escape hatch for non-literal queries.
 
-export default db;
+/**
+ * Run a SELECT and return all rows as plain objects.
+ */
+export async function all(sqlStr, params = []) {
+  return sql.query(sqlStr, params);
+}
+
+/**
+ * Run a SELECT and return the first row, or null.
+ */
+export async function get(sqlStr, params = []) {
+  const rows = await sql.query(sqlStr, params);
+  return rows.length ? rows[0] : null;
+}
+
+/**
+ * Run an INSERT / UPDATE / DELETE.
+ * Returns { lastInsertRowid, changes } to preserve the existing route interface.
+ * Queries that need the new row id should include RETURNING id.
+ */
+export async function run(sqlStr, params = []) {
+  const result = await sql.query(sqlStr, params, { fullResults: true });
+  const lastInsertRowid = result.rows?.[0]?.id ?? null;
+  const changes = result.rowCount ?? 0;
+  return { lastInsertRowid, changes };
+}
+
+/**
+ * Run raw DDL SQL (single statement; top-level await handles schema bootstrap).
+ */
+export async function exec(sqlStr) {
+  await sql.query(sqlStr, []);
+}
+
+/**
+ * Execute a list of { sql, args } statements inside a Neon HTTP transaction.
+ * Uses sql.transaction() with the function form so queries are built lazily
+ * and sent as a single atomic HTTP request.
+ */
+export async function transaction(stmts) {
+  return sql.transaction((txn) => stmts.map((s) => txn.query(s.sql, s.args ?? [])));
+}
+
+export default sql;

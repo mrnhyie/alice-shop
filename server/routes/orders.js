@@ -1,39 +1,43 @@
-import { Router } from 'express';
-import db from '../db.js';
+import { Router }        from 'express';
+import { all, get, run, transaction } from '../db.js';
 
 const router = Router();
 
 /* ── GET /api/orders/stats  (must be before /:id) ── */
-router.get('/stats', (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
-    const totalRevenue = db.prepare(
-      "SELECT COALESCE(SUM(total),0) AS v FROM orders WHERE status != 'cancelled'"
-    ).get().v;
-    const totalOrders     = db.prepare('SELECT COUNT(*) AS v FROM orders').get().v;
-    const pendingOrders   = db.prepare("SELECT COUNT(*) AS v FROM orders WHERE status='pending'").get().v;
-    const deliveredOrders = db.prepare("SELECT COUNT(*) AS v FROM orders WHERE status='delivered'").get().v;
+    const rev  = await get("SELECT COALESCE(SUM(total),0) AS v FROM orders WHERE status != 'cancelled'");
+    const tot  = await get('SELECT COUNT(*) AS v FROM orders');
+    const pend = await get("SELECT COUNT(*) AS v FROM orders WHERE status='pending'");
+    const delv = await get("SELECT COUNT(*) AS v FROM orders WHERE status='delivered'");
 
-    const monthly = db.prepare(`
-      SELECT strftime('%m',created_at) AS month,
+    const monthly = await all(`
+      SELECT TO_CHAR(created_at, 'MM') AS month,
              SUM(total)   AS revenue,
              COUNT(*)     AS orders
       FROM orders GROUP BY month ORDER BY month
-    `).all();
+    `);
 
-    res.json({ totalRevenue, totalOrders, pendingOrders, deliveredOrders, monthly });
+    res.json({
+      totalRevenue:    Number(rev.v),
+      totalOrders:     Number(tot.v),
+      pendingOrders:   Number(pend.v),
+      deliveredOrders: Number(delv.v),
+      monthly,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
 /* ── GET /api/orders ── */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const orders = db.prepare(`
+    const orders = await all(`
       SELECT o.*,
              (SELECT COUNT(*) FROM order_items WHERE order_id=o.id) AS item_count
       FROM orders o ORDER BY o.created_at DESC
-    `).all();
+    `);
     res.json(orders);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -41,46 +45,45 @@ router.get('/', (req, res) => {
 });
 
 /* ── POST /api/orders ── */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { contact, shippingMethod, paymentMethod, cartItems, subtotal, shippingCost, total } = req.body;
   const orderRef = `ORD-${Date.now()}`;
 
-  const insertOrder = db.prepare(`
-    INSERT INTO orders
-      (order_ref,customer_name,customer_email,customer_phone,
-       shipping_address,shipping_city,shipping_region,shipping_country,
-       shipping_method,payment_method,subtotal,shipping_cost,total)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-  `);
-
-  const insertItem = db.prepare(`
-    INSERT INTO order_items
-      (order_id,product_id,product_name,product_image,size,color,quantity,unit_price)
-    VALUES (?,?,?,?,?,?,?,?)
-  `);
-
   try {
-    const orderId = db.transaction(() => {
-      const { lastInsertRowid } = insertOrder.run(
+    // Insert order and return the new id
+    const { lastInsertRowid: orderId } = await run(
+      `INSERT INTO orders
+         (order_ref,customer_name,customer_email,customer_phone,
+          shipping_address,shipping_city,shipping_region,shipping_country,
+          shipping_method,payment_method,subtotal,shipping_cost,total)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       RETURNING id`,
+      [
         orderRef,
         `${contact.firstName} ${contact.lastName}`,
         contact.email, contact.phone ?? '',
         contact.address, contact.city,
         contact.region ?? '', contact.country ?? 'Ghana',
         shippingMethod, paymentMethod,
-        subtotal, shippingCost, total
-      );
-      for (const item of cartItems) {
-        insertItem.run(
-          lastInsertRowid,
-          item.product.id ?? null,
-          item.product.name, item.product.image ?? '',
-          item.size ?? '', item.color ?? '',
-          item.quantity, item.product.price
-        );
-      }
-      return lastInsertRowid;
-    })();
+        subtotal, shippingCost, total,
+      ],
+    );
+
+    // Insert each item
+    const itemStmts = cartItems.map((item) => ({
+      sql: `INSERT INTO order_items
+              (order_id,product_id,product_name,product_image,size,color,quantity,unit_price)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      args: [
+        orderId,
+        item.product.id ?? null,
+        item.product.name, item.product.image ?? '',
+        item.size ?? '', item.color ?? '',
+        item.quantity, item.product.price,
+      ],
+    }));
+
+    if (itemStmts.length) await transaction(itemStmts);
 
     res.status(201).json({ orderId, orderRef });
   } catch (e) {
@@ -89,11 +92,11 @@ router.post('/', (req, res) => {
 });
 
 /* ── GET /api/orders/:id ── */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
+    const order = await get('SELECT * FROM orders WHERE id=$1', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'Not found' });
-    const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(req.params.id);
+    const items = await all('SELECT * FROM order_items WHERE order_id=$1', [req.params.id]);
     res.json({ ...order, items });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -101,12 +104,13 @@ router.get('/:id', (req, res) => {
 });
 
 /* ── PATCH /api/orders/:id/status ── */
-router.patch('/:id/status', (req, res) => {
+router.patch('/:id/status', async (req, res) => {
   const { status } = req.body;
-  const valid = ['pending','processing','shipped','delivered'];
-  if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const valid = ['pending', 'processing', 'shipped', 'delivered'];
+  if (!valid.includes(status))
+    return res.status(400).json({ error: 'Invalid status' });
   try {
-    db.prepare('UPDATE orders SET status=? WHERE id=?').run(status, req.params.id);
+    await run('UPDATE orders SET status=$1 WHERE id=$2', [status, req.params.id]);
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
