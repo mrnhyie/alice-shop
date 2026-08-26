@@ -229,9 +229,6 @@ export default function Landing() {
       <section className="relative overflow-hidden bg-[#f8f3e8] px-5 pb-10 pt-28 sm:px-8 sm:pt-32 lg:min-h-screen lg:pl-28 lg:pr-10">
         <KentePattern id="hero-kente" color="#c56a28" opacity={0.035} />
         <div className="relative mx-auto max-w-7xl text-center">
-          <span className="inline-flex rounded-full border border-[#b5d735] bg-[#CBEF43] px-5 py-2 text-sm font-bold text-zinc-900 shadow-[0_8px_24px_rgba(203,239,67,0.28)]">
-            African fashion, made for expression
-          </span>
           <h1 className="mx-auto mt-6 max-w-4xl font-sans text-5xl font-bold tracking-[-0.065em] text-zinc-950 sm:text-6xl lg:text-8xl lg:leading-[0.9]">
             Wear your heritage.<br />Own your story.
           </h1>
