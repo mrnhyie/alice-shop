@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import MaterialIcon, { ShoppingBag, Heart, Search, Menu, X, ChevronDown } from './MaterialIcon';
 import { useCart } from '../context/CartContext';
@@ -10,10 +10,23 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
   const { cartCount, setIsCartOpen } = useCart();
   const { customer, isLoggedIn, logout: customerLogout } = useCustomerAuth();
   const location = useLocation();
   const isLanding = location.pathname === '/';
+
+  // Close account popup when clicking outside
+  useEffect(() => {
+    function handleClick(e) {
+      if (accountRef.current && !accountRef.current.contains(e.target)) {
+        setAccountOpen(false);
+      }
+    }
+    if (accountOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [accountOpen]);
 
   useEffect(() => {
     let active = true;
@@ -122,19 +135,68 @@ export default function Navbar() {
 
               {/* Customer Account / Login */}
               {isLoggedIn ? (
-                <div className={`hidden md:flex items-center gap-1 ml-2 relative group ${isLanding ? 'md:ml-0 md:self-center' : ''}`}>
-                  <button title={isLanding ? customer?.name : undefined} className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${isLanding ? 'md:h-9 md:w-9 md:justify-center md:p-0' : ''} ${
-                    isTransparent ? 'text-white hover:bg-white/10 border border-white/30' : 'text-zinc-700 hover:bg-zinc-100 border border-zinc-200'
-                  }`}>
-                    <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-[10px] font-bold">{customer?.name?.[0]?.toUpperCase()}</span>
+                <div ref={accountRef} className={`hidden md:flex items-center relative ml-2 ${isLanding ? 'md:ml-0 md:self-center' : ''}`}>
+                  <button
+                    onClick={() => setAccountOpen((v) => !v)}
+                    title={isLanding ? customer?.name : undefined}
+                    className={`flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${isLanding ? 'md:h-9 md:w-9 md:justify-center md:p-0' : ''} ${
+                      isTransparent ? 'text-white hover:bg-white/10 border border-white/30' : 'text-zinc-700 hover:bg-zinc-100 border border-zinc-200'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-[11px] font-bold leading-none">{customer?.name?.[0]?.toUpperCase()}</span>
                     </div>
                     <span className={isLanding ? 'md:hidden' : ''}>{customer?.name?.split(' ')[0]}</span>
+                    {!isLanding && <MaterialIcon name="ChevronDown" size={14} className={`text-zinc-400 transition-transform duration-200 ${accountOpen ? 'rotate-180' : ''}`} />}
                   </button>
-                  <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-zinc-100 rounded-xl shadow-lg py-1.5 opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-                    <Link to="/messages" className="block px-4 py-2 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-orange-500">Messages</Link>
-                    <button onClick={customerLogout} className="w-full text-left px-4 py-2 text-sm text-zinc-600 hover:text-red-500 hover:bg-zinc-50 transition-colors">Sign Out</button>
-                  </div>
+
+                  {/* Popup dropdown — rendered in a portal-like fixed position to avoid clipping */}
+                  {accountOpen && (
+                    <div className="absolute top-[calc(100%+8px)] right-0 w-52 bg-white border border-zinc-100 rounded-2xl shadow-2xl shadow-zinc-200/80 py-2 z-[200] animate-[fadeDropIn_0.15s_ease-out]">
+                      {/* Header */}
+                      <div className="px-4 py-3 border-b border-zinc-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-sm font-bold">{customer?.name?.[0]?.toUpperCase()}</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-zinc-900 truncate">{customer?.name}</p>
+                            <p className="text-xs text-zinc-400 truncate">{customer?.email}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu items */}
+                      <div className="py-1.5">
+                        <Link
+                          to="/messages"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-orange-500 transition-colors"
+                        >
+                          <MaterialIcon name="MessageSquare" size={17} className="text-zinc-400" />
+                          Messages
+                        </Link>
+                        <Link
+                          to="/store"
+                          onClick={() => setAccountOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-700 hover:bg-zinc-50 hover:text-orange-500 transition-colors"
+                        >
+                          <MaterialIcon name="ShoppingBag" size={17} className="text-zinc-400" />
+                          Browse Store
+                        </Link>
+                      </div>
+
+                      <div className="border-t border-zinc-50 pt-1.5 pb-1">
+                        <button
+                          onClick={() => { customerLogout(); setAccountOpen(false); }}
+                          className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-zinc-500 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <MaterialIcon name="LogOut" size={17} className="text-zinc-400" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Link to="/login" title={isLanding ? 'Sign in' : undefined} className={`hidden md:flex items-center text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ml-2 ${isLanding ? 'md:ml-0 md:h-9 md:w-9 md:justify-center md:p-0' : ''} ${
