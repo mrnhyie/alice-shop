@@ -45,6 +45,14 @@ if (existsSync(distPath)) {
   app.get('/', (_req, res) => res.json({ message: 'API running — run `npm run build` to serve the frontend.' }));
 }
 
-app.listen(PORT, () => {
-  console.log(`\n🛍  Alice Shop  →  http://localhost:${PORT}\n`);
-});
+// Export for Vercel (serverless) — Vercel calls the exported handler directly.
+// When running locally with `node server/index.js`, we start the HTTP server.
+if (process.env.VERCEL) {
+  // Vercel serverless: just export the app
+} else {
+  app.listen(PORT, () => {
+    console.log(`\n🛍  Alice Shop  →  http://localhost:${PORT}\n`);
+  });
+}
+
+export default app;

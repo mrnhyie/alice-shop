@@ -1,16 +1,23 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "builds": [
-    {
-      "src": "server/index.js",
-      "use": "@vercel/node"
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "functions": {
+    "server/index.js": {
+      "includeFiles": "server/**"
     }
-  ],
+  },
   "routes": [
     {
-      "src": "/(.*)",
+      "src": "/api/(.*)",
       "dest": "server/index.js"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
