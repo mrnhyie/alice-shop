@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import MaterialIcon, { ShoppingBag, Heart, Search, Menu, X, ChevronDown } from './MaterialIcon';
+import MaterialIcon, { ShoppingBag, Heart, Search, Menu, X, ChevronDown, MessageSquare } from './MaterialIcon';
 import { useCart } from '../context/CartContext';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { announcementsApi } from '../api/announcements';
+import { messagesApi } from '../api/customers';
 import cultureConnectLogo from '../assets/culture-connect-logo.webp';
 
 export default function Navbar() {
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const accountRef = useRef(null);
   const { cartCount, setIsCartOpen } = useCart();
   const { customer, isLoggedIn, logout: customerLogout } = useCustomerAuth();
@@ -27,6 +29,21 @@ export default function Navbar() {
     if (accountOpen) document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [accountOpen]);
+
+  // Poll unread message count for logged-in customers
+  useEffect(() => {
+    if (!isLoggedIn || !customer?.id) return;
+    const fetchUnread = async () => {
+      try {
+        const msgs = await messagesApi.list(customer.id);
+        const count = msgs.filter((m) => m.sender === 'admin' && m.status !== 'read').length;
+        setUnreadMessages(count);
+      } catch { /* silent */ }
+    };
+    fetchUnread();
+    const t = setInterval(fetchUnread, 15000);
+    return () => clearInterval(t);
+  }, [isLoggedIn, customer?.id]);
 
   useEffect(() => {
     let active = true;
@@ -132,6 +149,24 @@ export default function Navbar() {
                   </span>
                 )}
               </button>
+
+              {/* Messages icon — visible when logged in */}
+              {isLoggedIn && (
+                <Link
+                  to="/messages"
+                  title="Messages"
+                  className={`p-2 rounded-full transition-colors relative ${isLanding ? 'md:flex md:items-center md:justify-center' : ''} ${
+                    isTransparent ? 'text-white hover:bg-white/10' : 'text-zinc-600 hover:bg-zinc-100'
+                  } ${location.pathname === '/messages' ? 'text-orange-500 bg-orange-50' : ''}`}
+                >
+                  <MessageSquare size={20} />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadMessages > 9 ? '9+' : unreadMessages}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               {/* Customer Account / Login */}
               {isLoggedIn ? (
@@ -251,7 +286,21 @@ export default function Navbar() {
               ))}
               {isLoggedIn ? (
                 <>
-                  <Link to="/messages" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 text-sm font-medium text-zinc-700 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">Messages</Link>
+                  <Link
+                    to="/messages"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 text-sm font-medium text-zinc-700 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare size={17} className="text-zinc-400" />
+                      Messages
+                    </div>
+                    {unreadMessages > 0 && (
+                      <span className="min-w-[20px] h-5 px-1 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadMessages > 9 ? '9+' : unreadMessages}
+                      </span>
+                    )}
+                  </Link>
                   <button onClick={() => { customerLogout(); setIsMenuOpen(false); }} className="block w-full text-left px-3 py-2.5 text-sm font-medium text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">Sign Out ({customer?.name?.split(' ')[0]})</button>
                 </>
               ) : (

@@ -498,34 +498,34 @@ export default function Store() {
       {/* ════════════════════════════════
           Page body
       ════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8">
 
-        {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 text-sm text-zinc-400">
+        {/* Breadcrumb — hidden on mobile to save space */}
+        <nav className="mb-4 hidden sm:flex items-center gap-1.5 text-sm text-zinc-400">
           <a href="/" className="hover:text-orange-500 transition-colors">Home</a>
           <ChevronRight className="w-3.5 h-3.5" />
           <span className="font-medium text-zinc-900">Shop</span>
         </nav>
 
         {/* Page title */}
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl lg:text-4xl font-bold text-zinc-900">
+        <div className="mb-5 sm:mb-8">
+          <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-zinc-900">
             Our Collection
           </h1>
-          <p className="mt-1 text-zinc-500">
+          <p className="mt-1 text-sm text-zinc-500">
             {filteredProducts.length} result{filteredProducts.length !== 1 ? 's' : ''}
           </p>
         </div>
 
         {/* Search bar */}
-        <div className="relative mb-6">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none" />
+        <div className="relative mb-4 sm:mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search products, styles…"
-            className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-12 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-all"
+            placeholder="Search products…"
+            className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 sm:py-3 pl-11 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 transition-all"
           />
           {searchQuery && (
             <button
@@ -552,18 +552,18 @@ export default function Store() {
           <div className="min-w-0 flex-1">
 
             {/* Top bar: mobile-filter button + sort + view toggle */}
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between gap-2">
 
               {/* Left side */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {/* Mobile filter trigger */}
                 <button
                   type="button"
                   onClick={() => setMobileFiltersOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:border-orange-400 transition-colors lg:hidden"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:border-orange-400 transition-colors lg:hidden"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
-                  Filters
+                  <span>Filters</span>
                   {activeFilterCount > 0 && (
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
                       {activeFilterCount}
@@ -583,22 +583,22 @@ export default function Store() {
                   <select
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value)}
-                    className="cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-4 pr-8 text-sm font-medium text-zinc-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
+                    className="cursor-pointer appearance-none rounded-xl border border-zinc-200 bg-white py-2 pl-3 pr-7 text-xs font-medium text-zinc-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
                   >
                     {SORT_OPTIONS.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
                 </div>
 
-                {/* Grid / List toggle */}
-                <div className="flex overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                {/* Grid / List toggle — hidden on mobile to save space */}
+                <div className="hidden sm:flex overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setViewMode('grid')}
                     title="Grid view"
-                    className={`p-2.5 transition-colors ${
+                    className={`p-2 transition-colors ${
                       viewMode === 'grid' ? 'bg-orange-500 text-white' : 'text-zinc-500 hover:bg-zinc-50'
                     }`}
                   >
@@ -608,7 +608,7 @@ export default function Store() {
                     type="button"
                     onClick={() => setViewMode('list')}
                     title="List view"
-                    className={`p-2.5 transition-colors ${
+                    className={`p-2 transition-colors ${
                       viewMode === 'list' ? 'bg-orange-500 text-white' : 'text-zinc-500 hover:bg-zinc-50'
                     }`}
                   >
@@ -669,7 +669,7 @@ export default function Store() {
               </div>
             ) : viewMode === 'grid' ? (
               /* Grid view */
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
                 {filteredProducts.map(product => (
                   <ProductCard key={product.id} product={product} viewMode="grid" />
                 ))}

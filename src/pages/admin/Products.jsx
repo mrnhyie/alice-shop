@@ -157,8 +157,13 @@ export default function Products() {
   // ── Add mode ───────────────────────────────────────────────────────────────
 
   const handleSubmitProduct = async () => {
-    if (!draft.name.trim() || !draft.price) {
-      showToast('Name and price are required', 'error');
+    const parsedPrice = parseFloat(draft.price);
+    if (!draft.name.trim()) {
+      showToast('Product name is required', 'error');
+      return;
+    }
+    if (!draft.price || isNaN(parsedPrice) || parsedPrice < 0) {
+      showToast('Please enter a valid price', 'error');
       return;
     }
     const image =
@@ -167,8 +172,8 @@ export default function Products() {
         : draft.imageUrl.trim() || '';
     const productData = {
       name: draft.name.trim(),
-      category: draft.category,
-      price: parseFloat(draft.price),
+      category: draft.category || 'Clothing',
+      price: parsedPrice,
       artisan: draft.artisan.trim() || 'Unknown Artisan',
       region: draft.region.trim() || 'Unknown Region',
       badge: draft.badge || null,
@@ -214,8 +219,13 @@ export default function Products() {
   };
 
   const handleSubmitEdit = async () => {
-    if (!draft.name.trim() || !draft.price) {
-      showToast('Name and price are required', 'error');
+    const parsedPrice = parseFloat(draft.price);
+    if (!draft.name.trim()) {
+      showToast('Product name is required', 'error');
+      return;
+    }
+    if (!draft.price || isNaN(parsedPrice) || parsedPrice < 0) {
+      showToast('Please enter a valid price', 'error');
       return;
     }
     const image =
@@ -224,8 +234,8 @@ export default function Products() {
         : draft.imageUrl.trim() || '';
     const productData = {
       name: draft.name.trim(),
-      category: draft.category,
-      price: parseFloat(draft.price),
+      category: draft.category || 'Clothing',
+      price: parsedPrice,
       artisan: draft.artisan.trim() || 'Unknown Artisan',
       region: draft.region.trim() || 'Unknown Region',
       badge: draft.badge || null,
